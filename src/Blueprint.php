@@ -2,13 +2,13 @@
 
 namespace Dingo\Blueprint;
 
-use ReflectionClass;
-use RuntimeException;
-use Illuminate\Support\Str;
-use Illuminate\Support\Collection;
-use Illuminate\Filesystem\Filesystem;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\SimpleAnnotationReader;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use ReflectionClass;
+use RuntimeException;
 
 class Blueprint
 {
@@ -20,7 +20,7 @@ class Blueprint
     protected $reader;
 
     /**
-     * Filesytsem instance.
+     * Filesystem instance.
      *
      * @var \Illuminate\Filesystem\Filesystem
      */
@@ -37,9 +37,7 @@ class Blueprint
      * Create a new generator instance.
      *
      * @param \Doctrine\Common\Annotations\SimpleAnnotationReader $reader
-     * @param \Illuminate\Filesystem\Filesystem                   $files
-     *
-     * @return void
+     * @param \Illuminate\Filesystem\Filesystem $files
      */
     public function __construct(SimpleAnnotationReader $reader, Filesystem $files)
     {
@@ -59,14 +57,17 @@ class Blueprint
         $this->reader->addNamespace('Dingo\\Blueprint\\Annotation');
         $this->reader->addNamespace('Dingo\\Blueprint\\Annotation\\Method');
 
+        /** @noinspection PhpDeprecationInspection */
         AnnotationRegistry::registerLoader(function ($class) {
-            $path = __DIR__.'/'.str_replace(['Dingo\\Blueprint\\', '\\'], ['', DIRECTORY_SEPARATOR], $class).'.php';
+            $path = __DIR__ . '/' . str_replace(['Dingo\\Blueprint\\', '\\'], ['', DIRECTORY_SEPARATOR], $class) . '.php';
 
             if (file_exists($path)) {
                 require_once $path;
 
                 return true;
             }
+
+            return null;
         });
     }
 
@@ -74,9 +75,9 @@ class Blueprint
      * Generate documentation with the name and version.
      *
      * @param \Illuminate\Support\Collection $controllers
-     * @param string                         $name
-     * @param string                         $version
-     * @param string                         $includePath
+     * @param string $name
+     * @param string $version
+     * @param string $includePath
      *
      * @return bool
      */
@@ -86,7 +87,7 @@ class Blueprint
 
         $groups = new Collection;
 
-        $resources = $controllers->map(function ($controller) use ($version, $groups) {
+        $controllers->each(function ($controller) use ($version, $groups) {
             $controller = $controller instanceof ReflectionClass ? $controller : new ReflectionClass($controller);
 
             $actions = new Collection;
@@ -96,13 +97,13 @@ class Blueprint
             // We'll also build up an array of actions on each resource.
             foreach ($controller->getMethods() as $method) {
                 if ($versionAnnotation = $this->reader->getMethodAnnotation($method, Annotation\Versions::class)) {
-                    if (! in_array($version, $versionAnnotation->value)) {
+                    if (!in_array($version, $versionAnnotation->value)) {
                         continue;
                     }
                 }
 
                 if ($annotations = $this->reader->getMethodAnnotations($method)) {
-                    if (! $actions->contains($method)) {
+                    if (!$actions->contains($method)) {
                         $actions->push(new Action($method, new Collection($annotations)));
                     }
                 }
@@ -110,30 +111,24 @@ class Blueprint
 
             $annotations = new Collection($this->reader->getClassAnnotations($controller));
 
-            $versions = $annotations->filter(function($item) {
+            $versions = $annotations->filter(function ($item) {
                 return $item instanceof Annotation\Versions;
             })->first();
 
             // if the group does not have the intended version, the group is skipped
-            if( isset($versions->value) && in_array($version, $versions->value) )
-            {
+            if (isset($versions->value) && in_array($version, $versions->value)) {
                 $resource = new RestResource($controller->getName(), $controller, $annotations, $actions);
 
                 // Find or create group and add resource to it
                 $group = $groups->where('identifier', $resource->getGroupIdentifier())->first() ?: new Group($resource);
                 $group->addResource($resource);
-                if (! $resource->getGroupIdentifier()) {
+                if (!$resource->getGroupIdentifier()) {
                     // Prepend resource group with no identifier so this group appears first
                     $groups->contains($group) ?: $groups->prepend($group);
                 } else {
                     $groups->contains($group) ?: $groups->push($group);
                 }
-
-                return $resource;
             }
-
-
-            return false;
         });
 
         $contents = $this->generateContentsFromGroups($groups, $name);
@@ -147,7 +142,7 @@ class Blueprint
      * Generate the documentation contents from the groups collection.
      *
      * @param \Illuminate\Support\Collection $groups
-     * @param string                         $name
+     * @param string $name
      *
      * @return string
      */
@@ -160,14 +155,13 @@ class Blueprint
         $contents .= sprintf('# %s', $name);
         $contents .= $this->line(2);
 
-        $groups->each(function ($group) use (&$contents) {
-
+        $groups->each(function (Group $group) use (&$contents) {
             if ($group->getIdentifier()) {
                 $contents .= $group->getDefinition();
                 $contents .= $this->line(2);
             }
 
-            $group->getResources()->each(function ($resource) use (&$contents) {
+            $group->getResources()->each(function (RestResource $resource) use (&$contents) {
 
                 if ($resource->getActions()->isEmpty()) {
                     return;
@@ -180,11 +174,11 @@ class Blueprint
                     $contents .= $description;
                 }
 
-                if (($parameters = $resource->getParameters()) && ! $parameters->isEmpty()) {
+                if (($parameters = $resource->getParameters()) && !$parameters->isEmpty()) {
                     $this->appendParameters($contents, $parameters);
                 }
 
-                $resource->getActions()->each(function ($action) use (&$contents, $resource) {
+                $resource->getActions()->each(function (Action $action) use (&$contents, $resource) {
                     $contents .= $this->line(2);
                     $contents .= $action->getDefinition();
 
@@ -193,11 +187,11 @@ class Blueprint
                         $contents .= $description;
                     }
 
-                    if (($attributes = $action->getAttributes()) && ! $attributes->isEmpty()) {
+                    if (($attributes = $action->getAttributes()) && !$attributes->isEmpty()) {
                         $this->appendAttributes($contents, $attributes);
                     }
 
-                    if (($parameters = $action->getParameters()) && ! $parameters->isEmpty()) {
+                    if (($parameters = $action->getParameters()) && !$parameters->isEmpty()) {
                         $this->appendParameters($contents, $parameters);
                     }
 
@@ -232,9 +226,9 @@ class Blueprint
     /**
      * Append the attributes subsection to a resource or action.
      *
-     * @param string                         $contents
+     * @param string $contents
      * @param \Illuminate\Support\Collection $attributes
-     * @param int                            $indent
+     * @param int $indent
      *
      * @return void
      */
@@ -263,7 +257,7 @@ class Blueprint
     /**
      * Append the parameters subsection to a resource or action.
      *
-     * @param string                         $contents
+     * @param string $contents
      * @param \Illuminate\Support\Collection $parameters
      *
      * @return void
@@ -300,9 +294,9 @@ class Blueprint
     /**
      * Append a response subsection to an action.
      *
-     * @param string                               $contents
+     * @param string $contents
      * @param \Dingo\Blueprint\Annotation\Response $response
-     * @param \Dingo\Blueprint\RestResource        $resource
+     * @param \Dingo\Blueprint\RestResource $resource
      *
      * @return void
      */
@@ -311,10 +305,10 @@ class Blueprint
         $this->appendSection($contents, sprintf('Response %s', $response->statusCode));
 
         if (isset($response->contentType)) {
-            $contents .= ' ('.$response->contentType.')';
+            $contents .= ' (' . $response->contentType . ')';
         }
 
-        if (! empty($response->headers) || $resource->hasResponseHeaders()) {
+        if (!empty($response->headers) || $resource->hasResponseHeaders()) {
             $this->appendHeaders($contents, array_merge($resource->getResponseHeaders(), $response->headers));
         }
 
@@ -330,9 +324,9 @@ class Blueprint
     /**
      * Append a request subsection to an action.
      *
-     * @param string                              $contents
+     * @param string $contents
      * @param \Dingo\Blueprint\Annotation\Request $request
-     * @param \Dingo\Blueprint\RestResource       $resource
+     * @param \Dingo\Blueprint\RestResource $resource
      *
      * @return void
      */
@@ -341,12 +335,12 @@ class Blueprint
         $this->appendSection($contents, 'Request');
 
         if (isset($request->identifier)) {
-            $contents .= ' '.$request->identifier;
+            $contents .= ' ' . $request->identifier;
         }
 
-        $contents .= ' ('.$request->contentType.')';
+        $contents .= ' (' . $request->contentType . ')';
 
-        if (! empty($request->headers) || $resource->hasRequestHeaders()) {
+        if (!empty($request->headers) || $resource->hasRequestHeaders()) {
             $this->appendHeaders($contents, array_merge($resource->getRequestHeaders(), $request->headers));
         }
 
@@ -376,7 +370,7 @@ class Blueprint
         $line = strtok($body, "\r\n");
 
         while ($line !== false) {
-            $contents .= $this->tab(3).$line;
+            $contents .= $this->tab(3) . $line;
 
             $line = strtok("\r\n");
 
@@ -390,7 +384,7 @@ class Blueprint
      * Append a headers subsection to an action.
      *
      * @param string $contents
-     * @param array  $headers
+     * @param array $headers
      *
      * @return void
      */
@@ -401,7 +395,7 @@ class Blueprint
         $contents .= $this->line();
 
         foreach ($headers as $header => $value) {
-            $contents .= $this->line().$this->tab(3).sprintf('%s: %s', $header, $value);
+            $contents .= $this->line() . $this->tab(3) . sprintf('%s: %s', $header, $value);
         }
     }
 
@@ -410,8 +404,8 @@ class Blueprint
      *
      * @param string $contents
      * @param string $name
-     * @param int    $indent
-     * @param int    $lines
+     * @param int $indent
+     * @param int $lines
      *
      * @return void
      */
@@ -419,7 +413,7 @@ class Blueprint
     {
         $contents .= $this->line($lines);
         $contents .= $this->tab($indent);
-        $contents .= '+ '.$name;
+        $contents .= '+ ' . $name;
     }
 
     /**
@@ -435,11 +429,11 @@ class Blueprint
         if (is_string($body) && Str::startsWith($body, ['json', 'file'])) {
             list($type, $path) = explode(':', $body);
 
-            if (! Str::endsWith($path, '.json') && $type == 'json') {
+            if (!Str::endsWith($path, '.json') && $type == 'json') {
                 $path .= '.json';
             }
 
-            $body = $this->files->get($includePath.'/'.$path);
+            $body = $this->files->get($this->includePath . '/' . $path);
 
             json_decode($body);
 

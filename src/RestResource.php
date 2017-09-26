@@ -3,8 +3,8 @@
 namespace Dingo\Blueprint;
 
 use Illuminate\Support\Collection;
+use phpDocumentor\Reflection\DocBlockFactory;
 use ReflectionClass;
-use phpDocumentor\Reflection\DocBlock;
 
 class RestResource extends Section
 {
@@ -53,12 +53,10 @@ class RestResource extends Section
     /**
      * Create a new resource instance.
      *
-     * @param string                         $identifier
-     * @param \ReflectionClass               $reflector
+     * @param string $identifier
+     * @param \ReflectionClass $reflector
      * @param \Illuminate\Support\Collection $annotations
      * @param \Illuminate\Support\Collection $actions
-     *
-     * @return void
      */
     public function __construct($identifier, ReflectionClass $reflector, Collection $annotations, Collection $actions)
     {
@@ -77,7 +75,7 @@ class RestResource extends Section
      */
     protected function setResourceOnActions()
     {
-        $this->actions->each(function ($action) {
+        $this->actions->each(function (Action $action) {
             $action->setResource($this);
         });
     }
@@ -92,12 +90,12 @@ class RestResource extends Section
         $definition = $this->getUri();
 
         if ($method = $this->getMethod()) {
-            $definition = $method.' '.$definition;
+            $definition = $method . ' ' . $definition;
         }
 
         $level = $this->getGroupIdentifier() ? '## ' : '# ';
 
-        return $level.$this->getIdentifier().($definition == '/' ? '' : ' ['.$definition.']');
+        return $level . $this->getIdentifier() . ($definition == '/' ? '' : ' [' . $definition . ']');
     }
 
     /**
@@ -120,6 +118,8 @@ class RestResource extends Section
         if (($annotation = $this->getGroupAnnotation()) && isset($annotation->identifier)) {
             return $annotation->identifier;
         }
+
+        return null;
     }
 
     /**
@@ -140,7 +140,7 @@ class RestResource extends Section
     public function getUri()
     {
         if (($annotation = $this->getAnnotationByType('Resource')) && isset($annotation->uri)) {
-            return '/'.trim($annotation->uri, '/');
+            return '/' . trim($annotation->uri, '/');
         }
 
         return '/';
@@ -156,6 +156,8 @@ class RestResource extends Section
         if (($annotation = $this->getAnnotationByType('Resource')) && isset($annotation->method)) {
             return $annotation->method;
         }
+
+        return null;
     }
 
     /**
@@ -165,9 +167,9 @@ class RestResource extends Section
      */
     public function getDescription()
     {
-        $factory = \phpDocumentor\Reflection\DocBlockFactory::createInstance();
-        $docblock = $factory->create($this->reflector);
-        $text = $docblock->getSummary().$docblock->getDescription();
+        $factory = DocBlockFactory::createInstance();
+        $docBlock = $factory->create($this->reflector);
+        $text = $docBlock->getSummary() . $docBlock->getDescription();
         return $text;
     }
 

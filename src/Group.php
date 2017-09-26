@@ -23,11 +23,9 @@ class Group extends Section
     /**
      * Create a new group instance.
      *
-     * @param \Dingo\Blueprint\Resource $resource
-     *
-     * @return void
+     * @param \Dingo\Blueprint\RestResource $resource
      */
-    public function __construct(Resource $resource)
+    public function __construct(RestResource $resource)
     {
         $this->resources = new Collection([$resource]);
         $this->identifier = $resource->getGroupIdentifier();
@@ -46,11 +44,9 @@ class Group extends Section
     /**
      * Add resource to the group.
      *
-     * @param \Dingo\Blueprint\Resource $resource
-     *
-     * @return void
+     * @param \Dingo\Blueprint\RestResource $resource
      */
-    public function addResource(Resource $resource)
+    public function addResource(RestResource $resource)
     {
         $this->resources->contains($resource) ?: $this->resources->push($resource);
     }
@@ -73,7 +69,9 @@ class Group extends Section
     public function getDefinition()
     {
         if ($this->identifier) {
-            return '# Group '.$this->identifier;
+            return '# Group ' . $this->identifier;
         }
+
+        return null;
     }
 }

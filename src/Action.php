@@ -2,9 +2,10 @@
 
 namespace Dingo\Blueprint;
 
-use RuntimeException;
-use ReflectionMethod;
 use Illuminate\Support\Collection;
+use phpDocumentor\Reflection\DocBlockFactory;
+use ReflectionMethod;
+use RuntimeException;
 
 class Action extends Section
 {
@@ -32,10 +33,8 @@ class Action extends Section
     /**
      * Create a new action instance.
      *
-     * @param \ReflectionMethod              $reflector
+     * @param \ReflectionMethod $reflector
      * @param \Illuminate\Support\Collection $annotations
-     *
-     * @return void
      */
     public function __construct(ReflectionMethod $reflector, Collection $annotations)
     {
@@ -54,15 +53,15 @@ class Action extends Section
 
         if ($identifier = $this->getIdentifier()) {
             if ($uri = $this->getUri()) {
-                $definition = $definition.' '.$uri;
+                $definition = $definition . ' ' . $uri;
             }
 
-            $definition = $identifier.' ['.$definition.']';
+            $definition = $identifier . ' [' . $definition . ']';
         }
 
         $level = $this->resource->getGroupIdentifier() ? '### ' : '## ';
 
-        return $level.$definition;
+        return $level . $definition;
     }
 
     /**
@@ -75,6 +74,8 @@ class Action extends Section
         if ($annotation = $this->getAnnotationByType('Versions')) {
             return $annotation;
         }
+
+        return null;
     }
 
     /**
@@ -87,6 +88,8 @@ class Action extends Section
         if ($annotation = $this->getAnnotationByType('Response')) {
             return $annotation;
         }
+
+        return null;
     }
 
     /**
@@ -99,6 +102,8 @@ class Action extends Section
         if ($annotation = $this->getAnnotationByType('Request')) {
             return $annotation;
         }
+
+        return null;
     }
 
     /**
@@ -111,6 +116,8 @@ class Action extends Section
         if ($annotation = $this->getAnnotationByType('Transaction')) {
             return $annotation;
         }
+
+        return null;
     }
 
     /**
@@ -120,10 +127,10 @@ class Action extends Section
      */
     public function getIdentifier()
     {
-        $factory = \phpDocumentor\Reflection\DocBlockFactory::createInstance();
-        $docblock = $factory->create($this->reflector);
+        $factory = DocBlockFactory::createInstance();
+        $docBlock = $factory->create($this->reflector);
 
-        return $docblock->getSummary();
+        return $docBlock->getSummary();
     }
 
     /**
@@ -133,10 +140,10 @@ class Action extends Section
      */
     public function getDescription()
     {
-        $factory = \phpDocumentor\Reflection\DocBlockFactory::createInstance();
-        $docblock = $factory->create($this->reflector);
+        $factory = DocBlockFactory::createInstance();
+        $docBlock = $factory->create($this->reflector);
 
-        return $docblock->getDescription();
+        return $docBlock->getDescription();
     }
 
     /**
@@ -146,19 +153,17 @@ class Action extends Section
      */
     public function getUri()
     {
-        $uri = '/';
-
         if (($annotation = $this->getAnnotationByType('Method\Method')) && isset($annotation->uri)) {
             $uri = trim($annotation->uri, '/');
         } else {
-            return;
+            return null;
         }
 
-        if (! starts_with($uri, '{?')) {
-            $uri = '/'.$uri;
+        if (!starts_with($uri, '{?')) {
+            $uri = '/' . $uri;
         }
 
-        return '/'.trim(trim($this->resource->getUri(), '/').rtrim($uri, '/'), '/');
+        return '/' . trim(trim($this->resource->getUri(), '/') . rtrim($uri, '/'), '/');
     }
 
     /**

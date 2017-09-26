@@ -6,6 +6,9 @@ use Illuminate\Support\Collection;
 
 abstract class Section
 {
+    /** @var array */
+    protected $annotations = [];
+
     /**
      * Get an annotation by its type.
      *
